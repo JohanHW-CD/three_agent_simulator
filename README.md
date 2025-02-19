@@ -1,6 +1,7 @@
 # three_agent_simulator
-I wished to simulate the patterns of omnivores, herbivores and herbs. I took this code and ran it without visualisation and graphed averages on each quanta of time to check how different rules for species' and patterns affect the agents reproduciton. The visual is pretty and once completed a graph shows the competing species populations over time. I wrote the code in some variants and also some without the graphics in order to speed up the work, but I want to save this version. Made this during Christmas lol. Got an A on it.
+A simulation of omnivores, herbivores, and herbs on a macroscopic scale. A three agent antagonistic automata!
 
+How to run:
 1. Run the code
 2. Place agents by hovering the mouse over a square, left-click gives grass, right-click gives herbivores, A gives omnviores
 3. Due to the default setting, which can be changed, place at least 3 squares of each kind next to each other.
