@@ -1,0 +1,380 @@
+"""
+Game rules:
+
+Everything slowly dies
+Every species can eat plants
+Herbivores eat plants first
+Omnivores eat plants second
+
+Omnivores reproduce first
+Herbavores second
+Plants last
+
+Two or more needed to cause omnivores extinction
+All entities that eat the same tile recieve the same amount of energy
+Plants give energy
+Herbivores give more energy than plants
+There is a least amount of energy needed to reproduce higher than the energy at birth, hence animals will migrate towards
+food. Reproduction occurs in a randomized direction.
+
+It costs energy for herbivores and omnivores to reproduce.
+If any entity falls under 0 energy, it dies.
+Plants can reproduce without energy loss, but its randomized if it reproduces each turn.
+"""
+
+from builtins import int
+import pygame
+from matplotlib import pyplot as plt
+import random
+import numpy as np
+
+GRID_COLOR = (50, 50, 50)  # gray
+BG_COLOR = (5, 5, 5)  # dark black
+PLANT_COLOR = (20, 250, 20)  # Green
+OMNIVORE_COLOR = (0, 255, 255)  # Teal and omg it's gorgeous
+HERBIVORE_COLOR = (240, 250, 15)  # Yellow
+DYING_COLOR = (250, 0, 0)  # Red
+HEIGHT = 600
+WIDTH = 600
+RECT_SIZE = 10
+TILE_SIZE = int(WIDTH / RECT_SIZE)  # To make it not a square add in TILE_SIZE_W and change Width or so.
+
+# SWITCH is the game switch. The game is running if SWITCH == True
+
+# Reproduction can depend on 2 (or 3) things. Chance and energy. (Implicitly, nearby entities and that can be toggled)
+
+# Probability of reproducing 
+p_o = 0.08
+p_h = 0.09
+p_p = 0.3
+
+# Energy needed to reproduce:
+rep_needed_o = 10
+rep_needed_h = 8
+rep_needed_p = 0
+
+# Energy cost of reproduction
+rep_cost_o = 9
+rep_cost_h = 5
+rep_cost_p = 0
+
+# Energy upon birth
+omni_birth_e = 2
+herb_birth_e = 4
+plant_birth_e = 1000
+
+# Energy gained by consuming, e_o means entity omnivore, and e_h mans entity herbivore
+eat_plant_e_o = 2    
+eat_plant_e_h = 3.5
+eat_herb_e = 10
+
+"""
+To remember: 
+The plane is the board. Each interior of a grid is a tile. 
+
+-1: dead cell       AKA nothing there
+0: plant cell
+1: herbavore cell
+2: omivore cell 
+"""
+
+
+def make_array(dim1=TILE_SIZE, dim2=TILE_SIZE, value=-1):
+    # Maaann I should have just used zeroes for the empty squares, learning experience lol.
+    made_array = np.full((dim1, dim2), value)
+    return made_array
+
+
+def rep_chance(p):
+    # This function returns True if they reproduce. I imagine it being somewhat randomized due to Nature. 0 < p < 1
+    if p > random.random():
+        return True
+
+
+def coloring(tiles, r, c):
+    color = BG_COLOR  # default
+    if tiles[r, c] == 0:
+        color = PLANT_COLOR
+    elif tiles[r, c] == 1:
+        color = HERBIVORE_COLOR
+    elif tiles[r, c] == 2:
+        color = OMNIVORE_COLOR
+    return color
+
+
+def step(board, tiles, energies, SWITCH=False):
+    """Set color of the tile - check neighbors - apply rules to the tile (kill, reproduce) - draw the tile
+    repeat for all tiles, then retun the next board"""
+
+    plant_energy = energies[0]
+    herb_energy = energies[1]
+    omni_energy = energies[2]
+
+    next_generation = make_array()
+    for row, col in np.ndindex(tiles.shape):
+        # nindex return the coordinates of each "array point". .shape returns a tuple of the lengths. This is basically a 2D for-i-in-range()-loop
+        color = coloring(tiles, row, col)
+        # Now I want to check the neighbors of each point. next means next to, pos means position
+        next_plant = 0;
+        next_herb = 0;
+        next_omni = 0
+        plant_pos = [];
+        herb_pos = [];
+        omni_pos = []
+        # If I let the 80th tile be the 0nd tile it becomes periodic
+        # I think [-1] becomes the last tile automatically.
+        for a in range(row - 1, row + 2):
+            if a == TILE_SIZE:
+                a = 0
+            for b in range(col - 1, col + 2):
+                if b == TILE_SIZE:
+                    b = 0
+
+                # Skip itself
+                if a == row and b == col:
+                    continue
+
+                else:
+                    # -1: Empty; 0: plant; 1: herb; 2: omni
+                    if tiles[a, b] == 2:
+                        next_omni += 1
+                        omni_pos.append((a, b))
+
+                    elif tiles[a, b] == 1:
+                        next_herb += 1
+                        herb_pos.append((a, b))
+
+                    elif tiles[a, b] == 0:
+                        next_plant += 1
+                        plant_pos.append((a, b))
+
+        # Survival for an omni
+        if tiles[row, col] == 2:
+            if omni_energy[row, col] < 0:
+                if SWITCH:
+                    color = DYING_COLOR
+            else:
+                next_generation[row, col] = 2
+                if SWITCH:
+                    color = OMNIVORE_COLOR
+                    omni_energy[row, col] -= 1
+
+
+        # Survival for a herb
+        elif tiles[row, col] == 1:
+            if np.sum(next_omni) >= 2:
+                if SWITCH:
+                    color = DYING_COLOR
+                    for [y, x] in omni_pos:
+                        omni_energy[y, x] += eat_herb_e
+
+            elif herb_energy[row, col] < 0:
+                color = DYING_COLOR
+            else:
+                next_generation[row, col] = 1
+                if SWITCH:
+                    herb_energy[row, col] -= 1
+                    color = HERBIVORE_COLOR
+
+            # Survival for plant
+        elif tiles[row, col] == 0:
+            if np.sum(next_herb) > 0:
+                if SWITCH:
+                    color = DYING_COLOR
+                    for [y, x] in herb_pos:
+                        herb_energy[y, x] += eat_plant_e_h
+
+            elif np.sum(next_omni) > 0:
+                if SWITCH:
+                    color = DYING_COLOR
+                    for [y, x] in omni_pos:
+                        omni_energy[y, x] += eat_plant_e_o
+
+            elif plant_energy[row, col] < 0:
+                if SWITCH:
+                    color = DYING_COLOR
+
+            else:
+                plant_energy[row, col] -= 1
+                next_generation[row, col] = 0
+
+        else:
+            """Reproduction conditions for a non-living ell"""
+            # if np.sum(next_omni) >= 2 and rep_chance(p_o):
+            if rep_chance(p_o) and np.sum(next_omni) >= 2:
+                for [y, x] in omni_pos:
+                    if next_generation[
+                        row, col] == -1:  # I dont want 2 omnivores to reproduce in the same square. This puts preference to the left diagonal. I hope that is fine.
+                        # print((y,x), end = "")
+                        # print(omni_energy[y, x])
+                        if omni_energy[y, x] > rep_needed_o:
+                            omni_energy[y, x] -= rep_cost_o
+                            next_generation[row, col] = 2
+                            if SWITCH:
+                                omni_energy[row, col] = omni_birth_e
+                                color = OMNIVORE_COLOR
+
+            elif np.sum(next_herb) >= 2 and rep_chance(p_h):
+                for [y, x] in herb_pos:
+                    if next_generation[row, col] == -1:
+                        if herb_energy[y, x] > rep_needed_h:
+                            herb_energy[y, x] -= rep_cost_h
+                            next_generation[row, col] = 1
+                            if SWITCH:
+                                herb_energy[row, col] = herb_birth_e
+                                color = HERBIVORE_COLOR
+
+            elif np.sum(next_plant) >= 1 and rep_chance(p_p):
+                for [y, x] in plant_pos:
+                    if next_generation[row, col] == -1:
+                        if plant_energy[y, x] > rep_needed_p:
+                            herb_energy[y, x] -= rep_cost_p
+                            next_generation[row, col] = 0
+                            if SWITCH:
+                                plant_energy[row, col] += plant_birth_e
+                                color = PLANT_COLOR
+
+        pygame.draw.rect(board, color, (col * RECT_SIZE, row * RECT_SIZE, RECT_SIZE - 1, RECT_SIZE - 1))
+    return next_generation, energies
+
+
+def mouse_controlls(event, energies, tiles):
+    # Function is reached if mousebuttondown is detected
+    pos = pygame.mouse.get_pos()
+
+    if event.button == 1:  # plant
+        tiles[pos[1] // 10, pos[0] // 10] = 0
+        energies[0][pos[1] // 10, pos[0] // 10] = plant_birth_e  # Plants have a lot of energy
+
+    elif event.button == 3:
+        tiles[pos[1] // 10, pos[0] // 10] = 1
+        energies[1][pos[1] // 10, pos[0] // 10] = 10  # Herb energies
+    # Omni energies
+
+    return tiles, energies
+
+
+def game_loop(ts, nempts, nplants, nherbs, nomnis, n_steps):
+
+    # Initialize
+    SWITCH = False
+
+
+    pygame.init()
+    board = pygame.display.set_mode((WIDTH, HEIGHT))
+    board.set_alpha(None)
+
+    board.fill(GRID_COLOR)
+    tiles = make_array()
+    """Plants die after a long time then they can grow back. Herbivores and Omnivores lose energy every round"""
+    plante = make_array()
+    herbe = make_array()
+    omnie = make_array()
+
+    # Data storage:
+    t = 0;
+    empties = [];
+    plants = [];
+    herbs = [];
+    omnis = []
+    # Alright so I have tried countless methods of putting in the entities, the way Nisse did it is clearly the best
+
+    energies = [plante, herbe, omnie]
+
+    # Check if they show up
+    tiles, energies = step(board, tiles, energies)
+    pygame.display.flip()
+    # Main game loop
+
+    while 0 != 1:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                return (ts, nempts, nplants, nherbs, nomnis)
+            elif event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_q:
+                    pygame.quit()
+                    return (ts, nempts, nplants, nherbs, nomnis)
+                elif event.key == pygame.K_SPACE:
+                    SWITCH = not SWITCH  # lol thank you Stackoverflow
+
+                elif event.key == pygame.K_a:
+                    pos = pygame.mouse.get_pos()
+                    tiles[pos[1] // 10, pos[0] // 10] = 2
+                    energies[2][pos[1] // 10, pos[0] // 10] = 10
+                    step(board, tiles, energies)
+                    pygame.display.flip()
+
+            elif event.type == pygame.MOUSEBUTTONDOWN:
+                # print(tiles)
+                # print("BREAK")
+                tiles, energies = mouse_controlls(event, energies, tiles)
+                # print(tiles)
+                step(board, tiles, energies)
+                pygame.display.flip()
+
+        if SWITCH:
+            ts.append(t)
+            t += 1  # Should I track ticks or steps? I prefer steps I think
+            tiles, energies = step(board, tiles, energies, SWITCH)
+            nempt, nplant, nherb, nomni = count(tiles)
+            nempts.append(nempt)
+            nplants.append(nplant)
+            nherbs.append(nherb)
+            nomnis.append(nomni)
+            pygame.display.flip()
+
+        # pygame.time.wait(1)
+
+
+# Analytics functions
+def count(game_board):
+    """Counts the quantity of each celltype"""
+    nempty = 0;
+    nplant = 0;
+    nherb = 0;
+    nomni = 0
+    for r, c in np.ndindex(game_board.shape):
+        if game_board[r, c] == -1:
+            nempty += 1
+        elif game_board[r, c] == 0:
+            nplant += 1
+        elif game_board[r, c] == 1:
+            nherb += 1
+        elif game_board[r, c] == 2:
+            nomni += 1
+    return (nempty, nplant, nherb, nomni)
+
+
+def make_graph(ts, nempts, nplants, nherbs, nomnis):
+    plt.figure()
+    plt.title('Entities vs Time on a 20 x 20 Board')
+    plt.plot(ts, nplants, color="green", label='Plants')
+    plt.plot(ts, nherbs, color="yellow", label='Pests')
+    plt.plot(ts, nomnis, color="magenta", label='Omnivores')
+    plt.xlabel('Steps')
+    plt.ylabel('Number of entities')
+    plt.legend()
+    plt.show()
+
+
+
+
+def main():
+    # Got to love data storage lol
+    number_of_sims = 100
+    number_of_steps = 1000
+
+    ts = [];
+    nempts = [];
+    nplants = [];
+    nherbs = [];
+    nomnis = []
+
+    data = game_loop(ts, nempts, nplants, nherbs, nomnis,
+                         number_of_steps)  # data = (ts, nempts, nplants, nherbs, nomnis)
+    make_graph(ts, nempts, nplants, nherbs, nomnis)
+
+
+main()
+
