@@ -12,7 +12,7 @@ The code can easily be used to simulate yearly pesticides, different behaviors o
 
 Analysis.pdf is an analysis of the simulation. Scroll through it for some summaries on macroscopic three-agent patterns.
 
-Examples (in graphs carnivores are called pests):
+Examples starting with 3 main clusters (in graphs carnivores are called pests):
 ![image](https://github.com/user-attachments/assets/f3535808-cd9d-48fd-9807-1372c0706e35)
 
 ![image](https://github.com/user-attachments/assets/7a713231-730c-46e7-9640-afd86066c2f2)
