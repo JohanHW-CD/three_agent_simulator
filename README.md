@@ -13,10 +13,11 @@ The code can easily be used to simulate yearly pesticides, different behaviors o
 Analysis.pdf is an analysis of the simulation. Scroll through it for some summaries on macroscopic three-agent patterns.
 
 Examples starting with 3 main clusters (in graphs carnivores are called pests):
-![image](https://github.com/user-attachments/assets/f3535808-cd9d-48fd-9807-1372c0706e35)
 
 ![image](https://github.com/user-attachments/assets/7a713231-730c-46e7-9640-afd86066c2f2)
 
-On a macroscale, a showcase of that pesticides on herbs kill the carnivores in an ecosystem due to their much lower reproductive rate that the actual herbs. 
+On a macroscale, a showcase of that pesticides on herbs kill the apex predators in an ecosystem due to their much lower reproductive rate that the actual herbs (in graphs carnivores are called pests).
 
 ![image](https://github.com/user-attachments/assets/fa7fe034-0dc7-4919-8c65-9d2e74401778)
+
+Which is true in real life, so I am quite proud of this simulation!
